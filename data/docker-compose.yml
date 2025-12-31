@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: postgres
+    networks:
+      - proxy
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./postgres:/var/lib/postgresql
+    ports:
+    - 5432:5432
+
+  mongo:
+    image: mongo:8
+    container_name: mongo
+    restart: unless-stopped
+    networks: 
+      - proxy
+    command: ["--bind_ip_all"]
+    volumes:
+      - ./mongo:/data/db
+    environment:
+      - TZ=${TZ}
+
+  couchdb:
+    image: couchdb:3
+    container_name: couchdb
+    restart: unless-stopped
+    networks:
+      - proxy
+    environment:
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+    ports:
+      - "192.168.50.50:8701:5984"
+    volumes:
+      - ./couchdb:/opt/couchdb/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.obsidian-sync.rule=Host(`couchdb.${DOMAIN}`)"
+      - "traefik.http.routers.obsidian-sync.entrypoints=websecure"
+      - "traefik.http.routers.obsidian-sync.tls.certresolver=letsencrypt"
+      - "traefik.http.services.obsidian-sync.loadbalancer.server.port=5984"
+
+networks:
+  proxy:
+    driver: bridge
+    external: true

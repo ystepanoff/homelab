@@ -1,0 +1,54 @@
+services:
+  rclone-config:
+    image: rclone/rclone:1.68
+    container_name: rclone-config
+    networks:
+      - proxy
+    stdin_open: true
+    tty: true
+    entrypoint: ["rclone"]
+    volumes:
+      - ./rclone:/config
+    # usage: docker compose run --rm rclone-config config
+
+  stuff:
+    image: rclone/rclone:1.68
+    container_name: stuff
+    #user: "1000:1000"
+    restart: unless-stopped
+    networks:
+      - proxy
+    environment:
+      - TZ=${TZ}
+      - RCLONE_CONFIG=/config/rclone/rclone.conf
+      - RCLONE_WEBDAV_USER=${STUFF_WEBDAV_USER}
+      - RCLONE_WEBDAV_PASS=${STUFF_WEBDAV_PASSWORD}
+      - RCLONE_CONFIG_PASS=${STUFF_RCLONE_CONFIG_PASSWORD}
+    volumes:
+      - ./rclone:/config 
+    command: >
+      serve webdav proton:Stuff
+      --addr :8080
+      --baseurl /
+      --user ${STUFF_WEBDAV_USER}
+      --pass ${STUFF_WEBDAV_PASSWORD}
+      --vfs-cache-mode writes
+      --protondrive-replace-existing-draft=true
+      --retries 10
+      --low-level-retries 10
+      --retries-sleep 5s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.stuff.rule=Host(`stuff.${DOMAIN}`)"
+      - "traefik.http.routers.stuff.entrypoints=websecure"
+      - "traefik.http.routers.stuff.tls.certresolver=letsencrypt"
+      - "traefik.http.services.stuff.loadbalancer.server.port=8080"
+      - "com.centurylinklabs.watchtower.enable=true"
+    ports:
+      - "192.168.50.50:8401:8080"
+
+networks:
+  proxy:
+    driver: bridge
+    external: true

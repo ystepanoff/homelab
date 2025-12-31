@@ -1,0 +1,101 @@
+services:
+  signal-cli-rest-api:
+    image: bbernhard/signal-cli-rest-api:latest
+    container_name: signal-cli-rest-api
+    restart: unless-stopped
+    networks:
+      - proxy
+    environment:
+      MODE: normal
+    volumes:
+      - ./signal-cli-rest-api:/home/.local/share/signal-cli
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  signal-relay:
+    image: python:3.12-slim
+    container_name: signal-relay
+    restart: unless-stopped
+    networks:
+      - proxy
+    ports:
+      - "127.0.0.1:9090:8080"
+    environment:
+      - SIGNAL_RELAY_PORT=8080
+      - SIGNAL_API_URL=http://signal-cli-rest-api:8080/v2/send
+      - SIGNAL_NUMBER=+447597360722
+      - SIGNAL_RECIPIENT=+447597360722
+    working_dir: /app
+    volumes:
+      - ./signal-relay/app.py:/app/app.py:ro
+    command: ["python", "app.py"]
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    networks:
+      - proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - TZ=${TZ}
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_POLL_INTERVAL=86400
+      - WATCHTOWER_ROLLING_RESTART=true
+      - WATCHTOWER_NO_STARTUP_MESSAGE=true
+      - DOCKER_API_VERSION=1.44
+
+  dockge:
+    image: louislam/dockge:latest
+    container_name: dockge
+    networks:
+      - proxy
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      DOCKGE_STACKS_DIR: /stacks
+    volumes:
+      - ./dockge:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../:/stacks:rw
+    ports:
+      - "192.168.50.50:8501:5001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.dockge.rule=Host(`dockge.${DOMAIN}`)"
+      - "traefik.http.routers.dockge.entrypoints=websecure"
+      - "traefik.http.routers.dockge.tls.certresolver=letsencrypt"
+      - "traefik.http.services.dockge.loadbalancer.server.port=5001"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  hishtory-server:
+    image: lscr.io/linuxserver/hishtory-server:latest
+    container_name: hishtory-server
+    restart: unless-stopped
+    networks:
+      - proxy
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      - HISHTORY_POSTGRES_DB=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hishtory?sslmode=disable
+    volumes:
+      - ./hishtory:/config
+    ports:
+      - "192.168.50.50:8502:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.hishtory.rule=Host(`hishtory.${DOMAIN}`)"
+      - "traefik.http.routers.hishtory.entrypoints=websecure"
+      - "traefik.http.routers.hishtory.tls.certresolver=letsencrypt"
+      - "traefik.http.services.hishtory.loadbalancer.server.port=8080"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+networks:
+  proxy:
+    driver: bridge
+    external: true

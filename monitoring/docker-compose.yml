@@ -1,0 +1,189 @@
+services:
+  speedtest-tracker:
+    image: lscr.io/linuxserver/speedtest-tracker:latest
+    container_name: speedtest-tracker
+    networks: 
+      - proxy
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      DISPLAY_TIMEZONE: ${TZ}
+      APP_KEY: ${SPEEDTEST_TRACKER_APP_KEY}
+      APP_DEBUG: true
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: ${SPEEDTEST_TRACKER_DB}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      SPEEDTEST_SCHEDULE: ${SPEEDTEST_TRACKER_SCHEDULE}
+    volumes:
+      - ./speedtest-tracker:/config
+    ports:
+      - "192.168.50.50:8101:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.speed.rule=Host(`speed.${DOMAIN}`)"
+      - "traefik.http.routers.speed.entrypoints=websecure"
+      - "traefik.http.routers.speed.tls.certresolver=letsencrypt"
+      - "traefik.http.services.speed.loadbalancer.server.port=80"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  watchyourlan:
+    image: aceberg/watchyourlan:latest
+    container_name: watchyourlan
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      IFACES: ${WATCHYOURLAN_IFACES}
+      LOGLEVEL: DEBUG
+      THEME: vapor
+      USE_DB: postgres
+      PG_CONNECT: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5432/${WATCHYOURLAN_DB}?sslmode=disable"
+    volumes:
+      - ./watchyourlan:/data/WatchYourLAN
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  watchyourlan-proxy:
+    image: alpine/socat:latest
+    container_name: watchyourlan-proxy
+    command:
+      - TCP-LISTEN:8841,fork,reuseaddr
+      - TCP:host-gateway:8840
+    networks: 
+      - proxy
+    extra_hosts:
+      - "host-gateway:host-gateway"
+    depends_on: [ watchyourlan ]
+    restart: unless-stopped
+    ports:
+      - "192.168.50.50:8102:8841"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.watchyourlan.rule=Host(`lan.${DOMAIN}`)"
+      - "traefik.http.routers.watchyourlan.entrypoints=websecure"
+      - "traefik.http.routers.watchyourlan.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.watchyourlan.service=watchyourlan-proxy@docker"
+      - "traefik.http.services.watchyourlan-proxy.loadbalancer.server.port=8841"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    networks: 
+      - proxy
+    restart: unless-stopped
+    volumes:
+      - ./uptime-kuma:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "192.168.50.50:8103:3001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy" 
+      - "traefik.http.routers.uptime-kuma.rule=Host(`uptime.${DOMAIN}`)"
+      - "traefik.http.routers.uptime-kuma.entrypoints=websecure"
+      - "traefik.http.routers.uptime-kuma.tls=true"
+      - "traefik.http.routers.uptime-kuma.tls.certresolver=letsencrypt"
+      - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
+      - "com.centurylinklabs.watchtower.enable=true"
+      
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    networks: [ proxy ]
+    user: "1000:1000"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    environment:
+      - TZ=${TZ}
+    ports:
+      - "192.168.50.50:8104:9090"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    networks: [ proxy ]
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - TZ=${TZ}
+    user: "1000:1000"
+    volumes:
+      - ./grafana:/var/lib/grafana:rw
+    ports:
+      - "192.168.50.50:8105:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    networks: [ proxy ]
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/rootfs:ro,rslave
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/host/rootfs'
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    restart: unless-stopped
+    networks: 
+      - proxy
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/postgres?sslmode=disable
+
+  speedtest-exporter:
+    build: ./speedtest-exporter
+    container_name: speedtest-exporter
+    restart: unless-stopped
+    networks: [ proxy ]
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${SPEEDTEST_TRACKER_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - EXPORTER_PORT=9560
+      - POLL_INTERVAL_SECONDS=60
+
+networks:
+  proxy:
+    driver: bridge
+    external: true

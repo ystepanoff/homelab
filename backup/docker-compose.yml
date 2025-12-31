@@ -1,0 +1,32 @@
+services:
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    restart: unless-stopped
+    networks: [ proxy ]
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      - SETTINGS_ENCRYPTION_KEY=${DUPLICATI_ENCRYPTION_KEY}
+      - DUPLICATI__WEBSERVICE_PASSWORD=${DUPLICATI_WEBSERVICE_PASSWORD}
+      - CLI_ARGS=
+      - DOTNET_SYSTEM_IO_DISABLEFILELOCKING=true
+    volumes:
+      - ./duplicati/config:/config
+      - ./duplicati/backups:/backups
+      - /home/conway/homelab:/source/homelab:ro
+    ports:
+      - "192.168.50.50:8801:8200"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.duplicati.rule=Host(`bkp.${DOMAIN}`)"
+      - "traefik.http.routers.duplicati.entrypoints=websecure"
+      - "traefik.http.routers.duplicati.tls.certresolver=letsencrypt"
+      - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+networks:
+  proxy:
+    external: true

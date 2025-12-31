@@ -1,0 +1,80 @@
+services:
+  glance:
+    image: glanceapp/glance:latest
+    container_name: glance
+    networks:
+      - proxy
+    restart: unless-stopped
+    volumes:
+      - ./glance/config:/app/config:ro
+      - ./glance/assets:/app/assets
+    ports:
+      - "192.168.50.50:8601:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.glance.rule=Host(`glance.${DOMAIN}`)"
+      - "traefik.http.routers.glance.entrypoints=websecure"
+      - "traefik.http.routers.glance.tls.certresolver=letsencrypt"
+      - "traefik.http.services.glance.loadbalancer.server.port=8080"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:latest
+    container_name: mealie
+    restart: unless-stopped
+    networks: 
+      - proxy
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      #- BASE_URL=https://meals.${DOMAIN}
+    ports:
+      - "192.168.50.50:8602:9000"
+    volumes:
+      - ./mealie/data:/app/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.mealie.rule=Host(`meals.${DOMAIN}`)"
+      - "traefik.http.routers.mealie.entrypoints=websecure"
+      - "traefik.http.routers.mealie.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mealie.loadbalancer.server.port=9000"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  vikunja:
+    image: vikunja/vikunja:0.24.6
+    container_name: vikunja
+    restart: unless-stopped
+    networks: [ proxy ]
+    environment:
+      - TZ=${TZ}
+      - VIKUNJA_DATABASE_TYPE=postgres
+      - VIKUNJA_DATABASE_HOST=postgres
+      - VIKUNJA_DATABASE_USER=${POSTGRES_USER}
+      - VIKUNJA_DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - VIKUNJA_DATABASE_DATABASE=${VIKUNJA_DB}
+      - VIKUNJA_SERVICE_PUBLICURL=${VIKUNJA_API_URL}
+      - VIKUNJA_SERVICE_FRONTENDURL=${VIKUNJA_FRONTEND_URL}
+      - VIKUNJA_SERVICE_JWTSECRET=${VIKUNJA_JWT_SECRET}
+      - VIKUNJA_AUTH_LOCAL_ENABLED=true
+      - VIKUNJA_SERVICE_ENABLEREGISTRATION=true
+    ports:
+      - "192.168.50.50:8603:3456"
+    volumes:
+      - ./vikunja:/app/vikunja/files
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.vikunja.rule=Host(`tasks.${DOMAIN}`)"
+      - "traefik.http.routers.vikunja.entrypoints=websecure"
+      - "traefik.http.routers.vikunja.tls.certresolver=letsencrypt"
+      - "traefik.http.services.vikunja.loadbalancer.server.port=3456"
+      - "com.centurylinklabs.watchtower.enable=true"
+   
+
+
+networks:
+  proxy:
+    external: true
