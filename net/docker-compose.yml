@@ -71,6 +71,7 @@ services:
           --metrics.prometheus.entrypoint=metrics
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
       - 'traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN}`)'
       - "traefik.http.routers.traefik.entrypoints=websecure"
       - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
