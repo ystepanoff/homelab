@@ -3,7 +3,8 @@ services:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
     restart: unless-stopped
-    networks: 
+    env_file: ../.env
+    networks:
       - proxy
     environment:
       - PUID=1000
@@ -32,7 +33,8 @@ services:
     image: jellyfin/jellyfin:latest
     container_name: jellyfin
     restart: unless-stopped
-    networks: 
+    env_file: ../.env
+    networks:
       - proxy
     environment:
       PUID: 3001
@@ -61,7 +63,8 @@ services:
     image: filebrowser/filebrowser:s6
     container_name: filebrowser
     restart: unless-stopped
-    networks: 
+    env_file: ../.env
+    networks:
       - proxy
     volumes:
       - /mnt/torrents:/srv:rw
@@ -87,7 +90,8 @@ services:
     image: ghcr.io/kareadita/kavita:latest
     container_name: kavita
     restart: unless-stopped
-    networks: 
+    env_file: ../.env
+    networks:
       - proxy
     environment:
       PUID: 1000
@@ -111,7 +115,8 @@ services:
     image: ghcr.io/advplyr/audiobookshelf:latest
     container_name: audiobookshelf
     restart: unless-stopped
-    networks: 
+    env_file: ../.env
+    networks:
       - proxy
     environment:
       PUID: 1000

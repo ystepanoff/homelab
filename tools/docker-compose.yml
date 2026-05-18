@@ -3,6 +3,7 @@ services:
     image: bbernhard/signal-cli-rest-api:latest
     container_name: signal-cli-rest-api
     restart: unless-stopped
+    env_file: ../.env
     networks:
       - proxy
     environment:
@@ -16,6 +17,7 @@ services:
     image: python:3.12-slim
     container_name: signal-relay
     restart: unless-stopped
+    env_file: ../.env
     networks:
       - proxy
     ports:
@@ -34,6 +36,7 @@ services:
     image: containrrr/watchtower:latest
     container_name: watchtower
     restart: unless-stopped
+    env_file: ../.env
     networks:
       - proxy
     volumes:
@@ -50,6 +53,7 @@ services:
   dockge:
     image: louislam/dockge:latest
     container_name: dockge
+    env_file: ../.env
     networks:
       - proxy
     restart: unless-stopped
@@ -75,6 +79,7 @@ services:
     image: lscr.io/linuxserver/hishtory-server:latest
     container_name: hishtory-server
     restart: unless-stopped
+    env_file: ../.env
     networks:
       - proxy
     environment:

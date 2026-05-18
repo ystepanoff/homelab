@@ -3,6 +3,7 @@ services:
     image: lscr.io/linuxserver/duplicati:latest
     container_name: duplicati
     restart: unless-stopped
+    env_file: ../.env
     networks: [ proxy ]
     environment:
       - PUID=1000

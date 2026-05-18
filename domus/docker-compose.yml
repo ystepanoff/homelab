@@ -2,6 +2,7 @@ services:
   glance:
     image: glanceapp/glance:latest
     container_name: glance
+    env_file: ../.env
     networks:
       - proxy
     restart: unless-stopped
@@ -23,7 +24,8 @@ services:
     image: ghcr.io/mealie-recipes/mealie:latest
     container_name: mealie
     restart: unless-stopped
-    networks: 
+    env_file: ../.env
+    networks:
       - proxy
     environment:
       - PUID=1000
@@ -47,6 +49,7 @@ services:
     image: vikunja/vikunja:0.24.6
     container_name: vikunja
     restart: unless-stopped
+    env_file: ../.env
     networks: [ proxy ]
     environment:
       - TZ=${TZ}
