@@ -23,7 +23,7 @@ ensure_network() {
 
 compose() {
   local stack="$1"; shift
-  (cd "$ROOT_DIR/$stack" && docker compose "$@")
+  (cd "$ROOT_DIR/$stack" && docker compose --env-file "$ROOT_DIR/.env" "$@")
 }
 
 cmd_up() {
