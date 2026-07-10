@@ -59,11 +59,11 @@ services:
     restart: unless-stopped
     environment:
       TZ: ${TZ}
-      DOCKGE_STACKS_DIR: /stacks
+      DOCKGE_STACKS_DIR: /home/conway/homelab
     volumes:
       - ./dockge:/app/data
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ../:/stacks:rw
+      - /home/conway/homelab:/home/conway/homelab:rw
     ports:
       - "192.168.50.50:8501:5001"
     labels:

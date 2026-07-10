@@ -8,6 +8,7 @@ services:
     restart: always
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_AUTH_ONCE=true
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false
       - TS_ENABLE_METRICS=true

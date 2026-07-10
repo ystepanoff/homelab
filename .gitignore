@@ -1,3 +1,4 @@
+AGENTS.md
 .env
 backup/duplicati/
 data/couchdb/
@@ -25,3 +26,4 @@ tools/dockge/
 tools/hishtory/
 tools/signal-cli-rest-api/
 tools/signal-relay/
+
