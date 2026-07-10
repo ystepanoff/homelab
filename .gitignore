@@ -2,6 +2,7 @@ AGENTS.md
 .env
 backup/duplicati/
 data/couchdb/
+data/dumps/
 data/mongo/
 data/postgres/
 domus/glance/
