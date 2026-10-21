@@ -14,6 +14,7 @@ media/filebrowser/
 media/jellyfin/
 media/kavita/
 media/qbittorrent/
+media/sonarr/
 monitoring/grafana/
 monitoring/prometheus/
 monitoring/speedtest-exporter/
