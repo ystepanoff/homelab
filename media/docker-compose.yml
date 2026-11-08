@@ -46,6 +46,7 @@ services:
       - ./jellyfin:/config
       - /mnt/torrents/files:/media
       - /mnt/torrents/tv:/tv
+      - /mnt/torrents/movies:/movies
     devices:
       - /dev/dri:/dev/dri
     group_add:
@@ -162,6 +163,32 @@ services:
       - "traefik.http.routers.sonarr.entrypoints=websecure"
       - "traefik.http.routers.sonarr.tls.certresolver=letsencrypt"
       - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - proxy
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: ${TZ}
+    ports:
+      - "192.168.50.50:8307:7878"
+    volumes:
+      - ./radarr:/config
+      # Single mount so downloads (/data/files) and library (/data/movies) can be hardlinked
+      - /mnt/torrents:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN}`)"
+      - "traefik.http.routers.radarr.entrypoints=websecure"
+      - "traefik.http.routers.radarr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
       - "com.centurylinklabs.watchtower.enable=true"
 
 networks:
